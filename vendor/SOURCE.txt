@@ -1,3 +1,0 @@
-Schematic Studio editor copied from laplacian-n/digital-fpga-ecosystem (commit, then VERSION line of launcher/app.py):
-42fd74e
-VERSION = "2.8.0"
