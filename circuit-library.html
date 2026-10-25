@@ -26176,85 +26176,151 @@ pasteClipboard=function(){
 <!-- UX-LAYER:END -->
 <!-- CIRCUIT-LIBRARY:APP -->
 <style>
-/* คลังวงจร: no AI, no pin / board steps (those belong to the main program) */
-.cl-app #btnAiChat, .cl-app #aiChat, .cl-app .step[data-stage="pins"], .cl-app .step[data-stage="upload"],
-.cl-app [data-act="save-project"]{display:none !important}
-.cl-app .topbar .cl-copybtn{margin-left:6px}
-#clBar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:.18s;
-  display:flex;align-items:center;gap:10px;background:var(--bg-1);border:1px solid var(--accent);border-radius:10px;
-  box-shadow:var(--sh-3);padding:8px 10px 8px 14px;font-size:13px;z-index:900;max-width:92vw}
-#clBar.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
-#clBar .cl-ok{color:var(--ok,#16a34a);font-weight:700}
-#clBar .cl-x{padding:2px 8px}
-/* the steps the library does not use leave room for its two buttons */
-.cl-app .topbar .step[data-stage="pins"] + *, .cl-app .topbar .step[data-stage="upload"] + *{display:none}
-.cl-app .topbar #saveChip{display:none !important}
+/* คลังวงจร: the library window is the page */
+body.cl-lib > *:not(.modal-bg):not(#clResult):not(.toast-wrap):not(#toasts):not(script):not(style){visibility:hidden}
+.lib-bg.cl-page{background:var(--bg-0);backdrop-filter:none;align-items:stretch;justify-content:stretch;padding:0}
+.lib-bg.cl-page .modal{width:100% !important;max-width:none;height:100vh;max-height:none;border-radius:0;border:none;box-shadow:none}
+.lib-bg.cl-page .modal h2 .close, .lib-bg.cl-page #libSave{display:none}
+/* the result page */
+#clResult{position:fixed;inset:0;background:var(--bg-0);z-index:950;display:flex;flex-direction:column}
+.cl-res{display:flex;flex-direction:column;height:100%}
+.cl-head{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--line);font-size:16px;background:var(--bg-1)}
+.cl-body{flex:1;display:flex;min-height:0}
+.cl-side{width:340px;flex:none;padding:16px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:12px;overflow:auto;background:var(--bg-1)}
+.cl-main{flex:1;min-width:0;overflow:auto;padding:16px;display:flex}
+.cl-pic{flex:1;background:#fff;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;justify-content:center;padding:10px;min-height:0}
+.cl-pic svg{width:100%;height:100%;max-height:calc(100vh - 110px)}
+.cl-vhdl{flex:1;margin:0;background:var(--bg-1);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:12px;overflow:auto;color:var(--ink)}
+.cl-big{font-size:15px;padding:12px 14px}
+.cl-how{font-size:12px;color:var(--ink-dim);line-height:1.5}
+.cl-tip{font-size:12px;line-height:1.5}
+#clBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);display:flex;gap:10px;background:var(--bg-1);border:1px solid var(--accent);
+  border-radius:10px;box-shadow:var(--sh-3);padding:8px 10px;z-index:900}
 </style>
 <script>
 "use strict";
-/* ===== คลังวงจร (circuit library): the editor with the library first, and one way out — to the main program =====
-   Pick a part / VHDL block / tool in the library, it is generated and checked as in the main program, then
-   "คัดลอกไปโปรแกรมหลัก" puts it on the system clipboard (`clipCopySheet`, editor/ux/67-clip.js of the main repo):
-   Ctrl+V in Schematic Studio brings the block with every sheet / VHDL block it needs and its verified stamp. */
-const CL={last:null};
-document.title="คลังวงจร — FPGA Circuit Library";
-document.body.classList.add("cl-app");
-{ const br=document.querySelector(".topbar .brand"); if(br) br.textContent="⬡ คลังวงจร"; }
+/* ===== คลังวงจร (ISAN): the library window is the whole program ===========================================
+   The page is the library (categories, cards, search) and nothing else. Picking a card opens the same form as in
+   the main program; what it makes is generated and checked there, then a result page says what was made and how
+   it was checked, with "คัดลอกไปโปรแกรมหลัก": the system clipboard gets it in the main program's clip format
+   (editor/ux/67-clip.js of the main repo), and Ctrl+V in Schematic Studio brings it with every sheet / VHDL block
+   it needs. The editor still runs underneath (it draws and simulates the parts); "ดูวงจรเต็ม" shows it. */
+const CL={known:new Set(), last:null, view:"lib"};
+document.title="คลังวงจร";
+document.body.classList.add("cl-app", "cl-lib");
 
-/* what to copy: the selection, else what was just made, else the sheet on screen */
-function clCopy(){
-  const sch=activeSch();
-  if(state.selection && state.selection.size){
-    CLIP.inMenu=true; let ok=false; try{ ok=document.execCommand("copy"); }finally{ CLIP.inMenu=false; }
-    if(ok) toast(`คัดลอก ${state.selection.size} ชิ้นที่เลือกแล้ว — ไปที่โปรแกรมหลักแล้วกด Ctrl+V`, "ok", 5000);
-    else toast("คัดลอกไม่ได้ — ลองกด Ctrl+C", "warn");
-    return;
-  }
-  if(!sch || !sch.components.some(c=>c.type!=="JUNCTION")){ toast("แผ่นนี้ยังว่าง — เลือกชิ้นส่วนจากคลังก่อน", "warn"); return; }
-  if(clipCopySheet(sch)) toast(`คัดลอก “${sch.name}” เป็นบล็อกแล้ว — ไปที่โปรแกรมหลัก คลิกบนแผ่นตรงที่จะวาง แล้วกด Ctrl+V`, "ok", 6000);
-  else toast("คัดลอกไม่ได้", "warn");
+/* only what makes a circuit, nothing that belongs to the user's own project */
+["report","labhelper","busports","equiv"].forEach(id=>{ const i=GENERATORS.findIndex(g=>g.id===id); if(i>=0) GENERATORS.splice(i,1); });
+{
+  const _list=libCatList;
+  libCatList=function(){ const L=_list.apply(this, arguments).filter(c=>!(c.id==="mine" || c.id==="vhdl" || String(c.id).startsWith("u:")));
+    return L.filter((c,i)=>!(c.sep && i===L.length-1)); };          // the "ของฉัน" heading has nothing under it now
+  const _items=libItems;
+  libItems=function(){ return _items.apply(this, arguments).filter(it=>it.kind!=="mod" && it.kind!=="vhdl"); };
 }
-/* the bar that follows each thing made */
-function clMade(what){
-  CL.last=what; let bar=document.getElementById("clBar");
-  if(!bar){ bar=document.createElement("div"); bar.id="clBar"; document.body.appendChild(bar); }
-  bar.innerHTML=`<span class="cl-ok">✓</span> <span>${esc(what.label)}</span>
-    <button class="btn btn-primary" data-cl="copy">คัดลอกไปโปรแกรมหลัก</button><button class="btn" data-cl="lib">เลือกชิ้นอื่น</button><button class="btn cl-x" data-cl="x" title="ปิด">×</button>`;
-  bar.classList.add("show");
+
+/* ---- the library as the page: opened at start, and again whenever a dialog closed it ---- */
+function clShowLib(){
+  if(!document.querySelector(".lib-bg")){ openLibrary(); const m=document.querySelector(".lib-bg");
+    if(m){ m.classList.add("cl-page"); const h=m.querySelector(".modal h2"); if(h && h.firstChild) h.firstChild.textContent="คลังวงจร"; } }
+}
+new MutationObserver(()=>{
+  if(CL.ready && CL.view==="lib" && !CL.busy && !document.querySelector(".lib-bg") && !document.querySelector(".modal-bg")){ CL.busy=true; setTimeout(()=>{ CL.busy=false; clAfterDialog(); }, 30); }
+}).observe(document.body, {childList:true});
+
+/* what a dialog made: a part / generator → its sheet; a VHDL block placed → that block alone */
+{
+  const how=name=>((state.project.customs[name]||{}).description||"").split(" — ").slice(1).join(" — ");
+  const _bp=MCP_OPS.build_part;
+  MCP_OPS.build_part=function(){ const r=_bp.apply(this, arguments); try{ CL.last={kind:"sheet", name:r.sheet, how:r.verified && r.verified.method}; }catch(_){} return r; };
+  const _vp=vhdlBlockPlace;
+  vhdlBlockPlace=function(name, sch){ const c=_vp.apply(this, arguments); CL.last={kind:"vhdl", name, sheet:(sch||activeSch()).id, cid:c.id, how:how(name)}; return c; };
+  const _wrap=vhdlWrapSheet;
+  vhdlWrapSheet=function(sch, name){ const r=_wrap.apply(this, arguments); CL.last={kind:"sheet", name:sch.name, how:how(name)}; return r; };
+}
+function clAfterDialog(){
+  let what=CL.last; CL.last=null;
+  if(!what){                                   // a tool (truth table, FSM, counter …) drew a new sheet
+    const fresh=Object.values(state.project.schematics).filter(s=>!CL.known.has(s.id) && s.components.some(c=>c.type!=="JUNCTION"));
+    const s=fresh[fresh.length-1];
+    if(s) what={kind:"sheet", name:s.name, how:sheetVerified(s) ? s.verified.how : ""};
+  }
+  Object.values(state.project.schematics).forEach(s=>CL.known.add(s.id));
+  if(what) clResult(what); else clShowLib();
+}
+
+/* ---- the result page ---- */
+function clSheetByName(n){ return Object.values(state.project.schematics).find(s=>s.name===n); }
+function clResult(what){
+  CL.view="result"; CL.cur=what;
+  document.querySelectorAll(".lib-bg").forEach(m=>m.remove());
+  let el=document.getElementById("clResult");
+  if(!el){ el=document.createElement("div"); el.id="clResult"; document.body.appendChild(el); }
+  el.style.display="";
+  let title="", ports=[], pic="";
+  if(what.kind==="vhdl"){ const cc=state.project.customs[what.name]; title=`บล็อก VHDL ${what.name}`;
+    ports=(cc.ports||[]).map(p=>({dir:p.dir, n:p.width>1?`${p.name}[${p.width-1}:0]`:p.name}));
+    pic=`<pre class="cl-vhdl">${esc(cc.vhdl)}</pre>`; }
+  else { const s=clSheetByName(what.name); title=s.name;
+    ports=schPortList(s).map(p=>({dir:p.dir, n:p.width>1?`${p.id}[${p.width-1}:0]`:p.id}));
+    pic=`<div class="cl-pic">${clSheetSvg(s)}</div>`; }
+  const fmt=d=>ports.filter(p=>p.dir===d).map(p=>esc(p.n)).join(", ")||"—";
+  el.innerHTML=`<div class="cl-res">
+    <div class="cl-head"><button class="btn" data-cl="back">← กลับไปคลัง</button><b>${esc(title)}</b>
+      ${what.how?`<span class="pt-badge ok" title="${esc(what.how)}">✓ ตรวจแล้ว</span>`:""}</div>
+    <div class="cl-body">
+      <div class="cl-side">
+        <div class="lib-io"><div><b>Input:</b> ${fmt("in")}</div><div><b>Output:</b> ${fmt("out")}</div></div>
+        ${what.how?`<div class="cl-how"><b>ตรวจแล้ว:</b> ${esc(what.how)}</div>`:""}
+        <button class="btn btn-primary cl-big" data-cl="copy">คัดลอกไปโปรแกรมหลัก</button>
+        <div class="muted cl-tip">แล้วไปที่ Schematic Studio คลิกบนแผ่นตรงที่จะวาง กด <b>Ctrl+V</b> — ${what.kind==="vhdl"?"บล็อก VHDL มาพร้อมโค้ด":"มาเป็นบล็อกเดียว พร้อมแผ่นย่อยที่ใช้"}</div>
+        ${what.kind==="vhdl"?"":`<button class="btn" data-cl="open">ดูวงจรเต็ม / จำลอง</button>`}
+      </div>
+      <div class="cl-main">${pic}</div>
+    </div></div>`;
+}
+/* a picture of the sheet as the editor draws it (its canvas SVG, framed on the drawing) */
+function clSheetSvg(s){
+  try{
+    openSchTab(s.id); renderAll();
+    const svg=document.getElementById("canvas"); if(!svg) return thumbnailSvg(s);   // the canvas IS the svg; its first group is the drawing
+    const g=svg.firstElementChild, box=g.getBBox();
+    const c=svg.cloneNode(true); c.removeAttribute("width"); c.removeAttribute("height"); c.removeAttribute("style"); c.removeAttribute("id");
+    const cg=c.firstElementChild; if(cg) cg.removeAttribute("transform");
+    c.querySelectorAll(".bp-clk, .grid, [data-grid]").forEach(x=>x.remove());
+    c.setAttribute("viewBox", `${box.x-20} ${box.y-20} ${box.width+40} ${box.height+40}`); c.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    return c.outerHTML;
+  }catch(e){ console.warn("picture", e); return thumbnailSvg(s); }
+}
+function clCopy(){
+  const w=CL.cur; if(!w) return;
+  let ok=false;
+  if(w.kind==="vhdl"){
+    const s=state.project.schematics[w.sheet], c=s && s.components.find(x=>x.id===w.cid);
+    const need=clipNeeds([c]);
+    CLIP.pending={kind:"parts", components:[JSON.parse(JSON.stringify(c))], wires:[], ties:[], sheets:need.sheets, customs:need.customs};
+    try{ ok=document.execCommand("copy"); }catch(_){}
+    if(!ok && navigator.clipboard){ navigator.clipboard.writeText(clipText(CLIP.pending)).catch(()=>{}); ok=true; }
+    CLIP.pending=null;
+  } else ok=clipCopySheet(clSheetByName(w.name));
+  const b=document.querySelector('#clResult [data-cl="copy"]');
+  if(ok){ toast("คัดลอกแล้ว — ไปที่โปรแกรมหลักแล้วกด Ctrl+V", "ok", 5000); if(b) b.textContent="✓ คัดลอกแล้ว (กดอีกครั้งได้)"; }
+  else toast("คัดลอกไม่ได้", "warn");
 }
 document.addEventListener("click", e=>{
   const b=e.target.closest && e.target.closest("[data-cl]"); if(!b) return;
   const a=b.dataset.cl;
   if(a==="copy") clCopy();
-  else if(a==="lib") openLibrary();
-  else if(a==="x"){ const bar=document.getElementById("clBar"); if(bar) bar.classList.remove("show"); }
+  else if(a==="back"){ CL.view="lib"; document.body.classList.add("cl-lib"); const r=document.getElementById("clResult"); if(r) r.remove(); clShowLib(); }
+  else if(a==="open"){ CL.view="editor"; document.body.classList.remove("cl-lib"); const r=document.getElementById("clResult"); if(r) r.style.display="none";
+    const s=clSheetByName(CL.cur.name); if(s){ openSchTab(s.id); renderAll(); try{ zoomFit(); }catch(_){} }
+    let bar=document.getElementById("clBar"); if(!bar){ bar=document.createElement("div"); bar.id="clBar"; document.body.appendChild(bar); }
+    bar.innerHTML=`<button class="btn" data-cl="result">← กลับ</button><button class="btn btn-primary" data-cl="copy">คัดลอกไปโปรแกรมหลัก</button>`; bar.style.display="flex"; }
+  else if(a==="result"){ document.body.classList.add("cl-lib"); const bar=document.getElementById("clBar"); if(bar) bar.style.display="none"; clResult(CL.cur); }
 });
-/* a part / generator draws a new sheet: that sheet is what gets copied */
-{
-  const _bp=MCP_OPS.build_part;
-  MCP_OPS.build_part=function(){ const r=_bp.apply(this, arguments);
-    try{ state.selection=new Set(); clMade({label:`สร้าง ${r.sheet} แล้ว (${r.verified && r.verified.method || "ตรวจแล้ว"})`}); }catch(_){} return r; };
-  const _gen=uxDrawGenerated;
-  uxDrawGenerated=function(){ const r=_gen.apply(this, arguments);
-    if(r && r.sch){ state.selection=new Set(); clMade({label:`สร้าง ${r.sch.name} แล้ว`}); } return r; };
-  // a VHDL block placed on the sheet: that block is selected, so the copy takes it alone
-  const _vp=vhdlBlockPlace;
-  vhdlBlockPlace=function(){ const c=_vp.apply(this, arguments);
-    setTimeout(()=>{ try{ state.selection=new Set([c.id]); renderAll(); clMade({label:`บล็อก VHDL ${c.type.slice(7)} — เลือกไว้แล้ว`}); }catch(_){} }, 0); return c; };
-}
-/* the header: the library and the way out */
-{
-  const save=document.querySelector('.topbar > [data-act="save-project"]');
-  if(save){
-    save.insertAdjacentHTML("beforebegin", `<button class="btn cl-libbtn" data-cl="lib" title="เปิดคลังชิ้นส่วน / บล็อก VHDL / เครื่องมือ">คลังวงจร</button>
-      <button class="btn btn-primary cl-copybtn" data-cl="copy" title="ที่เลือกอยู่ หรือทั้งแผ่นนี้เป็นบล็อกเดียว → วางในโปรแกรมหลักด้วย Ctrl+V">คัดลอกไปโปรแกรมหลัก</button>`);
-  }
-  try{ GENERATORS.find(g=>g.id==="library").name="คลังวงจร"; }catch(_){}
-}
-/* opens on the library (after the editor's own first-run dialog would have shown) */
-setTimeout(()=>{ document.querySelectorAll(".modal-bg").forEach(m=>{ if(!m.classList.contains("lib-bg")) m.remove(); }); openLibrary(); }, 900);
-/* only the tools that make a circuit (the lab report and the AI lab helper belong to the main program) */
-["report","labhelper"].forEach(id=>{ const i=GENERATORS.findIndex(g=>g.id===id); if(i>=0) GENERATORS.splice(i,1); });
+/* start: the editor's own first-run dialog never shows; the library fills the page */
+setTimeout(()=>{ document.querySelectorAll(".modal-bg").forEach(m=>m.remove());
+  Object.values(state.project.schematics).forEach(s=>CL.known.add(s.id)); clShowLib(); CL.ready=true; }, 700);
 
 </script>
 </body>
