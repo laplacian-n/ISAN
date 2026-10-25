@@ -8,3 +8,6 @@
 #clBar.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
 #clBar .cl-ok{color:var(--ok,#16a34a);font-weight:700}
 #clBar .cl-x{padding:2px 8px}
+/* the steps the library does not use leave room for its two buttons */
+.cl-app .topbar .step[data-stage="pins"] + *, .cl-app .topbar .step[data-stage="upload"] + *{display:none}
+.cl-app .topbar #saveChip{display:none !important}

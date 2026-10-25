@@ -5,6 +5,7 @@
 const CL={last:null};
 document.title="คลังวงจร — FPGA Circuit Library";
 document.body.classList.add("cl-app");
+{ const br=document.querySelector(".topbar .brand"); if(br) br.textContent="⬡ คลังวงจร"; }
 
 /* what to copy: the selection, else what was just made, else the sheet on screen */
 function clCopy(){
@@ -49,7 +50,7 @@ document.addEventListener("click", e=>{
 }
 /* the header: the library and the way out */
 {
-  const save=document.querySelector('.topbar [data-act="save-project"]');
+  const save=document.querySelector('.topbar > [data-act="save-project"]');
   if(save){
     save.insertAdjacentHTML("beforebegin", `<button class="btn cl-libbtn" data-cl="lib" title="เปิดคลังชิ้นส่วน / บล็อก VHDL / เครื่องมือ">คลังวงจร</button>
       <button class="btn btn-primary cl-copybtn" data-cl="copy" title="ที่เลือกอยู่ หรือทั้งแผ่นนี้เป็นบล็อกเดียว → วางในโปรแกรมหลักด้วย Ctrl+V">คัดลอกไปโปรแกรมหลัก</button>`);
@@ -58,3 +59,5 @@ document.addEventListener("click", e=>{
 }
 /* opens on the library (after the editor's own first-run dialog would have shown) */
 setTimeout(()=>{ document.querySelectorAll(".modal-bg").forEach(m=>{ if(!m.classList.contains("lib-bg")) m.remove(); }); openLibrary(); }, 900);
+/* only the tools that make a circuit (the lab report and the AI lab helper belong to the main program) */
+["report","labhelper"].forEach(id=>{ const i=GENERATORS.findIndex(g=>g.id===id); if(i>=0) GENERATORS.splice(i,1); });
