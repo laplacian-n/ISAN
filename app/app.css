@@ -1,0 +1,10 @@
+/* คลังวงจร: no AI, no pin / board steps (those belong to the main program) */
+.cl-app #btnAiChat, .cl-app #aiChat, .cl-app .step[data-stage="pins"], .cl-app .step[data-stage="upload"],
+.cl-app [data-act="save-project"]{display:none !important}
+.cl-app .topbar .cl-copybtn{margin-left:6px}
+#clBar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,30px);opacity:0;pointer-events:none;transition:.18s;
+  display:flex;align-items:center;gap:10px;background:var(--bg-1);border:1px solid var(--accent);border-radius:10px;
+  box-shadow:var(--sh-3);padding:8px 10px 8px 14px;font-size:13px;z-index:900;max-width:92vw}
+#clBar.show{transform:translate(-50%,0);opacity:1;pointer-events:auto}
+#clBar .cl-ok{color:var(--ok,#16a34a);font-weight:700}
+#clBar .cl-x{padding:2px 8px}
