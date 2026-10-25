@@ -71,10 +71,13 @@ function render() {
 const PARAM_LABEL = { n: "จำนวนบิต", m: "นับถึง (m)", cin: "มีขา cin", bus: "ขาแบบบัส", en: "มีขา enable", odd: "parity คี่", active_low: "active-low (บอร์ด EDGE)",
   output: "ขาออก", values: "ลำดับค่า", text: "ข้อความ", mode: "รูปแบบ", clr: "มีขา clr", set: "ชุดตัวอักษร", blank0: "รหัส 0 = ว่าง", down: "นับลง", load: "มีขา load",
   async: "async reset (วงจรเล็กลง)", format: "รูปแบบ", hex: "แสดง 0–F", dp: "จุดทศนิยม", ops: "ชุดคำสั่ง", k: "จำนวนชุดข้อมูล", pattern: "ลำดับบิต", mealy: "แบบ",
-  overlap: "ซ้อนทับได้", digits: "จำนวนหลัก", blank: "ดับเลข 0 นำหน้า", line1: "บรรทัด 1", line2: "บรรทัด 2", ch: "ช่อง ADC", baud: "baud", f: "ความถี่ (Hz)" };
+  overlap: "ซ้อนทับได้", digits: "จำนวนหลัก", blank: "ดับเลข 0 นำหน้า", line1: "บรรทัด 1", line2: "บรรทัด 2", ch: "ช่อง ADC", baud: "baud", f: "ความถี่ (Hz)",
+  how: "แบบ", note: "โน้ต", octave: "octave", oct_in: "เลือก octave จากขา oct", song: "เพลง (โน้ต)", bpm: "ความเร็ว (bpm)", loop: "วนซ้ำ",
+  lower: "ตัวพิมพ์เล็ก a–f", crlf: "ขึ้นบรรทัดใหม่ท้ายข้อความ" };
 /* the same setting means different things on a few items */
 const PARAM_LABEL_OF = { multiplier: { n: "บิตของ a", m: "บิตของ b" }, clock_divider: { n: "หารด้วย (N)" }, mod_counter: { n: "นับ 0 … N−1 (N)" },
-  jk_counter: { n: "นับ 0 … N−1 (N)" }, lcd_scroll: { text: "ข้อความที่เลื่อน", other: "อีกบรรทัด (นิ่ง, # = ตัวเลข)", row: "เลื่อนบรรทัดที่", right: "เลื่อนไปทางขวา", ms: "เลื่อน 1 ตัวทุก (ms)" }, mux: { n: "จำนวนขาข้อมูล" }, demux: { n: "จำนวนขาออก" }, encoder: { n: "จำนวนขาเข้า" }, mux_bus: { n: "บิตต่อชุด" } };
+  jk_counter: { n: "นับ 0 … N−1 (N)" }, ascii_value: { hex: "รับ A–F / a–f ด้วย" }, ascii_case: { mode: "แปลงเป็น" }, ring_counter: { n: "จำนวนบิต", down: "วิ่งกลับทาง" },
+  lcd_scroll: { text: "ข้อความที่เลื่อน", other: "อีกบรรทัด (นิ่ง, # = ตัวเลข)", row: "เลื่อนบรรทัดที่", right: "เลื่อนไปทางขวา", ms: "เลื่อน 1 ตัวทุก (ms)" }, mux: { n: "จำนวนขาข้อมูล" }, demux: { n: "จำนวนขาออก" }, encoder: { n: "จำนวนขาเข้า" }, mux_bus: { n: "บิตต่อชุด" } };
 const labelFor = (it, k) => (PARAM_LABEL_OF[it.kind] || {})[k] || PARAM_LABEL[k] || k;
 const show = (k, v) => typeof v === "boolean" ? (k === "mealy" ? (v ? "Mealy" : "Moore") : (v ? "ใช่" : "ไม่")) : String(v);
 function renderItem() {

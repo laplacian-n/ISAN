@@ -1,5 +1,2 @@
-text_scroll {"text":"CE KMITL "}: page.evaluate: McpError: internal check failed for text_scroll: {"cycle":0,"output":"d","want":1,"got":0}
 text_scroll {"text":"HELLO WORLD "}: page.evaluate: McpError: internal check failed for text_scroll: {"cycle":0,"output":"an","want":14,"got":2}
 text_scroll {"text":"0123456789 "}: page.evaluate: McpError: internal check failed for text_scroll: {"cycle":0,"output":"e","want":1,"got":0}
-led_pattern {"n":16,"mode":"johnson","en":false}: page.evaluate: McpError: internal check failed for led_pattern: {"cycle":11,"output":"led","want":2047,"got":1023}
-led_pattern {"n":16,"mode":"johnson","en":true}: page.evaluate: McpError: internal check failed for led_pattern: {"cycle":15,"output":"led","want":2047,"got":1023}
