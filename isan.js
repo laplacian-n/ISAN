@@ -74,7 +74,7 @@ const PARAM_LABEL = { n: "จำนวนบิต", m: "นับถึง (m)"
   overlap: "ซ้อนทับได้", digits: "จำนวนหลัก", blank: "ดับเลข 0 นำหน้า", line1: "บรรทัด 1", line2: "บรรทัด 2", ch: "ช่อง ADC", baud: "baud", f: "ความถี่ (Hz)" };
 /* the same setting means different things on a few items */
 const PARAM_LABEL_OF = { multiplier: { n: "บิตของ a", m: "บิตของ b" }, clock_divider: { n: "หารด้วย (N)" }, mod_counter: { n: "นับ 0 … N−1 (N)" },
-  jk_counter: { n: "นับ 0 … N−1 (N)" }, mux: { n: "จำนวนขาข้อมูล" }, demux: { n: "จำนวนขาออก" }, encoder: { n: "จำนวนขาเข้า" }, mux_bus: { n: "บิตต่อชุด" } };
+  jk_counter: { n: "นับ 0 … N−1 (N)" }, lcd_scroll: { text: "ข้อความที่เลื่อน", other: "อีกบรรทัด (นิ่ง, # = ตัวเลข)", row: "เลื่อนบรรทัดที่", right: "เลื่อนไปทางขวา", ms: "เลื่อน 1 ตัวทุก (ms)" }, mux: { n: "จำนวนขาข้อมูล" }, demux: { n: "จำนวนขาออก" }, encoder: { n: "จำนวนขาเข้า" }, mux_bus: { n: "บิตต่อชุด" } };
 const labelFor = (it, k) => (PARAM_LABEL_OF[it.kind] || {})[k] || PARAM_LABEL[k] || k;
 const show = (k, v) => typeof v === "boolean" ? (k === "mealy" ? (v ? "Mealy" : "Moore") : (v ? "ใช่" : "ไม่")) : String(v);
 function renderItem() {
